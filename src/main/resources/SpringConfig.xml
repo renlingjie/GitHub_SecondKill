@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+	http://www.springframework.org/schema/beans/spring-beans.xsd
+	http://www.springframework.org/schema/context
+	http://www.springframework.org/schema/context/spring-context.xsd
+	http://www.springframework.org/schema/aop
+	http://www.springframework.org/schema/aop/spring-aop.xsd
+	http://www.springframework.org/schema/tx
+	http://www.springframework.org/schema/tx/spring-tx.xsd">
+
+    <!--1、开启注解的扫描，只处理service和dao，controller不需要spring框架去处理-->
+    <context:component-scan base-package="com">
+        <!--配置哪些注解不扫描，其中在上面指定的包中，凡是是@controller的注解都不扫描-->
+        <context:exclude-filter type="annotation" expression="org.springframework.stereotype.Controller"/>
+    </context:component-scan>
+
+    <!--2、Spring整合Mybatis框架-->
+    <!--2.1、导入我们的数据库连接信息的配置文件-->
+    <context:property-placeholder location="classpath:jdbcConfig.properties" />
+    <!--2.2、配置连接池（这里我们使用的是c3p0的连接池）-->
+    <bean id="dataSource" class="com.mchange.v2.c3p0.ComboPooledDataSource">
+        <property name="driverClass" value="${driver}"/>
+        <property name="jdbcUrl" value="${url}"/>
+        <property name="user" value="${username}"/>
+        <property name="password" value="${password}"/>
+        <!--2.2.1、配置连接池私有属性：连接池最大、最小数量、最大数量用满情况下线程的等待
+        时间（超过这个设定时长就释放线程而非一直等待、获取连接失败的重试次数（c3p0内置次数太多） -->
+        <property name="maxPoolSize" value="30"/>
+        <property name="minPoolSize" value="10"/>
+        <property name="checkoutTimeout" value="1000"/>
+        <property name="acquireRetryAttempts" value="2"/>
+    </bean>
+    <!--2.3、配置SqlSessionFactory工厂-->
+    <!--因为我们的IOC容器需要Mybatis中的工厂创建出代理对象，才能将接口中的对象存入IOC容器中-->
+    <bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <!--2.3.1、这个工厂需要我们的数据库连接池，ref下的链接就是我们上面2.2的数据库连接池标签-->
+        <property name="dataSource" ref="dataSource"/>
+        <!--2.3.2、将Mybatis的配置文件整合进来-->
+        <property name="configLocation" value="classpath:SqlMapConfig.xml"/>
+        <!--2.3.3、将指定包下的类的全限定类名起别名为该类名-->
+        <property name="typeAliasesPackage" value="com.seckill.pojo"/>
+        <!--2.3.4、由于不是注解的方式，所以我们还需要告知系统XML文件的位置，这里mapper后面的/*.xml
+        是防止mapper包下还有其他非XML的，所以这样写指定一下-->
+        <property name="mapperLocations" value="classpath:mapper/*.xml"/>
+    </bean>
+    <!--2.4、配置Dao接口所在的包-->
+    <!--我IOC帮你用工厂创建代理对象，但是你得告诉我IOC创建哪个接口的代理对象-->
+    <bean id="mapperScanner" class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <!--2.4.1、注入SqlSessionFactory（之前没有加也成功实现了，但是我觉得加上更合乎逻辑）-->
+        <property name="sqlSessionFactoryBeanName" value="sqlSessionFactory"/>
+        <property name="basePackage" value="com.seckill.dao"/>
+    </bean>
+
+    <!--3、配置Spring框架的声明式事务管理-->
+    <!--3.1、配置事务管理器-->
+    <bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <property name="dataSource" ref="dataSource" />
+    </bean>
+    <!--3.2、开启基于注解的事务控制模式-->
+    <tx:annotation-driven transaction-manager="transactionManager" />
+
+    <!--4、注入ResidDao-->
+    <!--因为我们ResidDao虽然在dao目录下，但是并不是一个数据库交互的Java文件，没有xml，也没有交给mybatis
+    配置，所以我们要单独配置，就把它当作一个普通的类，通过bean加入到我们的IOC容器中-->
+    <bean id="redisDao" class="com.seckill.dao.cache.RedisDao">
+        <constructor-arg index="0" value="localhost"/>
+        <constructor-arg index="1" value="6379"/>
+    </bean>
+</beans>

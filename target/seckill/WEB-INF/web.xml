@@ -1,0 +1,53 @@
+<web-app xmlns="http://xmlns.jcp.org/xml/ns/javaee"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/javaee
+http://xmlns.jcp.org/xml/ns/javaee/web-app_3_1.xsd"
+         version="3.1"
+         metadata-complete="true">
+  <!--修改Servlet版本为3.1，因为默认的2.3版本不支持EL表达式，我们之前还得设置支持，换成3.1就不用了-->
+
+  <!--1、配置前端控制器（SpringMVC的web.xml配置）-->
+  <servlet>
+    <servlet-name>dispatcherServlet</servlet-name>
+    <servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>
+    <!--加载SpringMVC的配置文件-->
+    <init-param>
+      <param-name>contextConfigLocation</param-name>
+      <param-value>classpath:SpringMVCConfig.xml</param-value>
+    </init-param>
+    <!--启动服务器，就要求创建servlet-->
+    <load-on-startup>1</load-on-startup>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>dispatcherServlet</servlet-name>
+    <url-pattern>/</url-pattern>
+  </servlet-mapping>
+
+  <!--2、解决中文乱码的过滤器（SpringMVC的web.xml配置）-->
+  <filter>
+    <filter-name>characterEncodingFilter</filter-name>
+    <filter-class>org.springframework.web.filter.CharacterEncodingFilter</filter-class>
+    <!--自定义编码集-->
+    <init-param>
+      <param-name>encoding</param-name>
+      <param-value>UTF-8</param-value>
+    </init-param>
+  </filter>
+  <filter-mapping>
+    <filter-name>characterEncodingFilter</filter-name>
+    <url-pattern>/*</url-pattern>
+  </filter-mapping>
+
+  <!--3、配置Spring的监听器，默认只加载WEB-INF目录下的Spring配置文件-->
+  <!--其实就是通过监听器，将SpringMVC的web.xml中加入Spring的配置文件）-->
+  <listener>
+    <listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>
+  </listener>
+  <!--设置Spring配置文件的路径（因为默认只加载WEB-INF目录下的Spring配置文件，而考虑结构我们该目录下只有一个web.xml）
+  想要加载其他的（其实也就是将Spring的配置文件加载进来），就需要手动添加-->
+  <context-param>
+    <param-name>contextConfigLocation</param-name>
+    <param-value>classpath:SpringConfig.xml</param-value>
+  </context-param>
+
+</web-app>

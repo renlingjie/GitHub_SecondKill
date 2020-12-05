@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.seckill.dao.SuccessKilledDao">
+    <!--1.1、第一个接口方法对应的标签，由于是insert，所以不需要返回结果类型，同时传入的数据类型不是
+    实体类，我们都不需要再用parameterType指定-->
+    <!--1.2、如果发生主键冲突，也就是重复插入，我们通过ignore使之不报错，而是将执行结果返回（因为产生冲
+    突，插入的数据条数自然是0，我们可以通过返回值是0知道插入失败，之所以这么做是为了方便业务逻辑的处理）-->
+    <!--1.3、 这里面有一点需要注意，我们在设计这张表的时候，我们默认它插入的状态是-1表示无效。但是当它成功
+    执行插入的Sql语句之后，我们需要让它插入的状态显示为0表示插入成功-->
+    <insert id="insertSuccessKilled">
+        insert ignore into  success_killed(seckill_id,user_phone,state)
+        values (#{seckillId},#{userPhone},0);
+    </insert>
+
+    <!--2.1、第二个接口方法对应的标签。传入参数是long，parameterType="long"同样可以不写-->
+    <!--2.2、根据id查询SuccessKilled，并携带Seckill实体，告诉Mybatis，把结果映射到SuccessKilled同时映射Seckill属性-->
+    <!--2.3、首先是通过表success_killed内连接与其字段seckill_id相等的表seckill中的字段seckill_id，然后将这内连得到的
+    这两张表的属性区分处理：如果是表success_killed对应的SuccessKilled类的属性，不用说，经由别名+驼峰的配置自动对应字段与属性名。如果是
+    表seckill对应的Seckill类的属性，则是通过一个as "XXX"告诉这个属性对应表seckill中的哪一个字段，然后同样自动对应字段与属性名-->
+    <select id="queryByIdWithSeckill" resultType="SuccessKilled">
+        select
+          sk.seckill_id,
+          sk.user_phone,
+          sk.state,
+          sk.create_time,
+          s.seckill_id as "seckill.seckill_id",
+          s.name as "seckill.name",
+          s.number as "seckill.number",
+          s.start_time as "seckill.start_time",
+          s.end_time as "seckill.end_time",
+          s.create_time as "seckill.create_time"
+        from success_killed as sk inner join seckill as s
+        on sk.seckill_id = s.seckill_id
+        where sk.seckill_id = #{seckillId} and sk.user_phone = #{userPhone}
+    </select>
+</mapper>
